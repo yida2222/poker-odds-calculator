@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Odds Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  :root{--bg:#0b132b;--felt:#13402b;--felt-line:#1d5a3d;--panel:#1a2238;--line:#2c3654;--ink:#eef2f8;--dim:#94a3c4;--faint:#5f6d92;--red:#e5484d;--gold:#f5c451;--green:#46d369;--accent:#5b8cff;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);background-image:radial-gradient(circle at 50% -10%,rgba(91,140,255,.08),transparent 50%);color:var(--ink);font-family:'IBM Plex Mono',monospace;min-height:100vh;display:flex;justify-content:center;padding:36px 18px;}
+  .wrap{width:100%;max-width:640px;}
+  .topbar{display:flex;justify-content:flex-end;margin-bottom:14px;}
+  .lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .lang button{background:var(--panel);border:none;color:var(--dim);font-family:inherit;font-size:12px;padding:6px 14px;cursor:pointer;}
+  .lang button.active{background:rgba(91,140,255,.14);color:var(--accent);}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:10px;}
+  h1{font-family:'Fraunces',serif;font-size:32px;font-weight:600;margin-bottom:6px;}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:26px;}
+  .equity{background:linear-gradient(180deg,var(--felt),#0f3322);border:1px solid var(--felt-line);border-radius:16px;padding:26px;margin-bottom:16px;text-align:center;}
+  .eq-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7fb89a;margin-bottom:8px;}
+  .eq-big{font-family:'Fraunces',serif;font-size:64px;font-weight:700;line-height:1;color:#fff;}
+  .eq-big small{font-size:24px;color:#9fd4b4;}
+  .madehand{margin-top:10px;font-size:15px;color:var(--gold);font-weight:600;min-height:20px;}
+  .eq-detail{margin-top:10px;font-size:13px;color:#9fd4b4;display:flex;justify-content:center;gap:20px;}
+  .bar{height:8px;border-radius:6px;background:#0a2517;margin-top:14px;overflow:hidden;display:flex;}
+  .bar .win{background:var(--green);}.bar .tie{background:var(--gold);}.bar .lose{background:var(--red);}
+  .calc-note{font-size:11px;color:#6f9683;margin-top:10px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;}
+  .panel-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+  .panel-label .hint{color:var(--faint);text-transform:none;letter-spacing:0;}
+  .slot-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .slot{width:48px;height:66px;border-radius:8px;border:2px dashed var(--line);background:#0e1424;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;font-weight:600;transition:all .12s;}
+  .slot.filled{border-style:solid;background:#fff;}
+  .slot.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,140,255,.3);}
+  .slot.s-c,.slot.s-s{color:#1a1a1a;}.slot.s-d,.slot.s-h{color:var(--red);}
+  .slot .suit{font-size:14px;}
+  .opp{display:flex;align-items:center;gap:12px;}
+  .opp button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:#0e1424;color:var(--ink);font-family:inherit;font-size:16px;cursor:pointer;}
+  .opp .num{font-size:20px;font-weight:600;min-width:24px;text-align:center;}
+  .opp .oppunit{color:var(--dim);font-size:12px;margin-left:8px;}
+  .pot-inputs{display:flex;gap:12px;}
+  .pot-inputs .ip{flex:1;}
+  .pot-inputs label{display:block;font-size:11px;color:var(--dim);margin-bottom:6px;}
+  .pot-inputs input{width:100%;background:#0e1424;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:inherit;font-size:16px;padding:9px 10px;}
+  .decision{margin-top:16px;border-radius:10px;padding:14px 16px;font-size:14px;border:1px solid var(--line);}
+  .decision.call{background:rgba(70,211,105,.1);border-color:#1f6b38;color:#7fe89a;}
+  .decision.fold{background:rgba(229,72,77,.1);border-color:#7a2326;color:#ff9a9d;}
+  .decision.idle{color:var(--faint);}
+  .decision b{font-weight:600;}
+  .decision .rowline{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--dim);}
+  .actions{display:flex;gap:10px;}
+  .actions button{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:#0e1424;color:var(--dim);font-family:inherit;font-size:13px;cursor:pointer;}
+  footer{margin-top:22px;font-size:11px;color:var(--faint);line-height:1.7;}
+  .guide-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);}
+  .guide-toggle{font-size:20px;color:var(--accent);line-height:1;}
+  .guide-body{margin-top:16px;}
+  .guide-block{margin-bottom:16px;}
+  .guide-block:last-child{margin-bottom:0;}
+  .guide-sub{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;}
+  .guide-p{font-size:13px;color:var(--dim);line-height:1.65;}
+  .rank-list{display:flex;flex-direction:column;gap:11px;}
+  .rank-item{display:flex;flex-direction:column;gap:6px;}
+  .rank-head{display:flex;align-items:baseline;gap:10px;}
+  .rank-item .ord{color:var(--faint);font-size:11px;min-width:18px;}
+  .rank-item .nm{color:var(--ink);font-weight:600;min-width:120px;}
+  .rank-item .ex{color:var(--dim);font-size:12px;}
+  .mini-row{display:flex;gap:4px;margin-left:28px;}
+  .mini-card{width:24px;height:32px;border-radius:4px;background:#fff;color:#1a1a1a;font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  .mini-card.red{color:#e5484d;}
+  .mini-card .ms{font-size:11px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><div class="lang" id="lang"><button data-lang="zh" class="active">中</button><button data-lang="en">EN</button></div></div>
+  <div class="eyebrow" id="eyebrow"></div>
+  <h1 id="h1"></h1>
+  <p class="sub" id="sub"></p>
+
+  <div class="equity">
+    <div class="eq-label" id="eqLabel"></div>
+    <div class="eq-big" id="winPct">—<small>%</small></div>
+    <div class="madehand" id="madeHand"></div>
+    <div class="eq-detail"><span><span id="lblW"></span> <b id="wTxt">—</b></span><span><span id="lblT"></span> <b id="tTxt">—</b></span><span><span id="lblL"></span> <b id="lTxt">—</b></span></div>
+    <div class="bar"><div class="win" id="bWin" style="width:0"></div><div class="tie" id="bTie" style="width:0"></div><div class="lose" id="bLose" style="width:100%"></div></div>
+    <div class="calc-note" id="note"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span id="lblHand"></span></div>
+    <div class="slot-row" id="holeRow"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-label"><span id="lblBoard"></span><span class="hint" id="hintBoard"></span></div>
+    <div class="slot-row" id="boardRow"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-label"><span id="lblOpp"></span></div>
+    <div class="opp"><button id="oMinus">−</button><span class="num" id="oNum">1</span><button id="oPlus">+</button><span class="oppunit" id="oppUnit"></span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-label"><span id="lblPot"></span><span class="hint" id="hintPot"></span></div>
+    <div class="pot-inputs">
+      <div class="ip"><label id="lblPotSize"></label><input type="number" id="pot" min="0"></div>
+      <div class="ip"><label id="lblCall"></label><input type="number" id="call" min="0"></div>
+    </div>
+    <div class="decision idle" id="decision"></div>
+  </div>
+  <div class="actions"><button id="clearBtn"></button></div>
+
+  <div class="panel guide">
+    <div class="guide-head" id="guideHead">
+      <span id="guideTitle"></span>
+      <span class="guide-toggle" id="guideToggle">+</span>
+    </div>
+    <div class="guide-body" id="guideBody" style="display:none;">
+      <div class="guide-block">
+        <div class="guide-sub" id="gPlayTitle"></div>
+        <p class="guide-p" id="gPlayText"></p>
+      </div>
+      <div class="guide-block">
+        <div class="guide-sub" id="gRankTitle"></div>
+        <div class="rank-list" id="rankList"></div>
+      </div>
+      <div class="guide-block">
+        <div class="guide-sub" id="gToolTitle"></div>
+        <p class="guide-p" id="gToolText"></p>
+      </div>
+    </div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<div class="picker" id="picker" style="position:fixed;inset:0;background:rgba(5,8,18,.82);display:none;align-items:center;justify-content:center;z-index:10;padding:18px;">
+  <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:430px;width:100%;">
+    <div id="pickerTitle" style="font-size:13px;color:var(--dim);margin-bottom:14px;text-align:center;"></div>
+    <div id="suitTabs" style="display:flex;gap:8px;margin-bottom:14px;">
+      <button data-s="s" class="active" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--accent);background:rgba(91,140,255,.12);font-size:20px;cursor:pointer;color:#fff;">♠</button>
+      <button data-s="h" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0e1424;font-size:20px;cursor:pointer;color:var(--red);">♥</button>
+      <button data-s="d" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0e1424;font-size:20px;cursor:pointer;color:var(--red);">♦</button>
+      <button data-s="c" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0e1424;font-size:20px;cursor:pointer;color:#fff;">♣</button>
+    </div>
+    <div id="rankGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;"></div>
+    <button id="pickerClose" style="margin-top:14px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--dim);font-family:inherit;cursor:pointer;"></button>
+  </div>
+</div>
+
+<script>
+const RANKS='23456789TJQKA';
+const RANK_VAL={};RANKS.split('').forEach((r,i)=>RANK_VAL[r]=i+2);
+const SUITS='cdhs';const SUIT_SYM={c:'♣',d:'♦',h:'♥',s:'♠'};
+const DECK=[];for(const r of RANKS)for(const s of SUITS)DECK.push(r+s);
+
+const T={
+  zh:{eyebrow:"Texas Hold'em · 蒙特卡洛模拟",h1:"德州扑克胜率计算器",sub:"选手牌和公共牌，实时模拟胜率、显示你的牌型、并用底池赔率帮你判断该不该跟注。",
+    eqLabel:"你的胜率",lblW:"胜",lblT:"平",lblL:"负",noteIdle:"选择手牌后开始计算",noteSim:"模拟中…",
+    lblHand:"你的手牌",lblBoard:"公共牌",hintBoard:"翻牌 / 转牌 / 河牌",lblOpp:"对手数",oppUnit:"个随机手",
+    lblPot:"底池赔率",hintPot:"该不该跟注",lblPotSize:"当前底池",lblCall:"需跟注",potPh:"例 100",callPh:"例 50",
+    decIdle:"输入底池和跟注金额，并选好牌后给出建议。",
+    madePrefix:"当前牌型：",clear:"清空",pickerTitle:"选择一张牌",pickerCancel:"取消",
+    boardErr:"公共牌需要 0 / 3 / 4 / 5 张才能计算",
+    noteDone:(it,n)=>`基于 ${it.toLocaleString()} 次模拟 · 对手 ${n} 个`,
+    needOnly:(p)=>`需要的最低胜率 <b>${p}%</b>`,
+    needRow:(pot,call)=>`<div class="rowline"><span>底池赔率 ${pot} : ${call}</span><span>选好手牌后判断是否该跟</span></div>`,
+    call:"✓ 该跟注（+EV）",fold:"✕ 该弃牌（−EV）",
+    decRow:(w,need)=>`<div class="rowline"><span>你的胜率 ${w}%</span><span>需要的胜率 ${need}%</span></div>`,
+    footer:"胜率通过蒙特卡洛模拟估算（随机发牌约 25,000 次），对手手牌假设为均匀随机，统计误差约 ±1%。底池赔率 = 跟注 ÷（底池 + 跟注），即跟注所需的最低胜率。教育 / 娱乐用途，非赌博建议。",
+    names:{9:"皇家同花顺",8:"同花顺",7:"四条",6:"葫芦",5:"同花",4:"顺子",3:"三条",2:"两对",1:"一对",0:"高牌"},
+    guideTitle:"德州扑克基础介绍",
+    gPlayTitle:"怎么玩",
+    gPlayText:"每位玩家拿 2 张只属于自己的底牌；牌桌中央依次发出 5 张公共牌（翻牌 3 张、转牌 1 张、河牌 1 张），所有人共用。最终用你的 2 张底牌和 5 张公共牌中任意组成的最好 5 张牌比大小，牌型最大者赢得底池。",
+    gRankTitle:"牌型大小（从大到小）",
+    gToolTitle:"这个工具帮你算什么",
+    gToolText:"它通过随机模拟大量发牌，估算你当前的牌赢过对手的概率（胜率）；同时显示你目前已成的牌型，并结合你输入的底池与跟注金额，用底池赔率告诉你这一注跟下去长期是赚还是亏。",
+    ranks:[["皇家同花顺","同花的 A K Q J 10"],["同花顺","同花的五张连续牌"],["四条","四张同点数"],["葫芦","三条 + 一对"],["同花","五张同花色"],["顺子","五张连续点数"],["三条","三张同点数"],["两对","两个对子"],["一对","两张同点数"],["高牌","以上都不是"]]},
+  en:{eyebrow:"Texas Hold'em · Monte Carlo Equity",h1:"Poker Odds Calculator",sub:"Pick your hole cards and the board to simulate win equity, see your made hand, and use pot odds to decide whether to call.",
+    eqLabel:"Win equity",lblW:"Win",lblT:"Tie",lblL:"Lose",noteIdle:"Pick your hole cards to start",noteSim:"Simulating…",
+    lblHand:"Your hand",lblBoard:"Board",hintBoard:"Flop / Turn / River",lblOpp:"Opponents",oppUnit:"random hands",
+    lblPot:"Pot odds",hintPot:"Should you call?",lblPotSize:"Current pot",lblCall:"Call amount",potPh:"e.g. 100",callPh:"e.g. 50",
+    decIdle:"Enter pot and call amount, and pick your cards for a recommendation.",
+    madePrefix:"Made hand: ",clear:"Clear",pickerTitle:"Pick a card",pickerCancel:"Cancel",
+    boardErr:"Board must have 0 / 3 / 4 / 5 cards to compute",
+    noteDone:(it,n)=>`Based on ${it.toLocaleString()} simulations · ${n} opponent(s)`,
+    needOnly:(p)=>`Minimum win equity needed: <b>${p}%</b>`,
+    needRow:(pot,call)=>`<div class="rowline"><span>Pot odds ${pot} : ${call}</span><span>Pick your cards to judge the call</span></div>`,
+    call:"✓ Call (+EV)",fold:"✕ Fold (−EV)",
+    decRow:(w,need)=>`<div class="rowline"><span>Your equity ${w}%</span><span>Needed ${need}%</span></div>`,
+    footer:"Equity is estimated via Monte Carlo simulation (~25,000 random deals), assuming opponents hold uniformly random hands; statistical error ≈ ±1%. Pot odds = call ÷ (pot + call), i.e. the minimum win equity that makes a call break even. For education / entertainment, not gambling advice.",
+    names:{9:"Royal Flush",8:"Straight Flush",7:"Four of a Kind",6:"Full House",5:"Flush",4:"Straight",3:"Three of a Kind",2:"Two Pair",1:"Pair",0:"High Card"},
+    guideTitle:"Texas Hold'em — Quick Guide",
+    gPlayTitle:"How it's played",
+    gPlayText:"Each player gets 2 private hole cards. Five community cards are dealt face-up in the middle (3 on the flop, 1 turn, 1 river), shared by everyone. You make your best 5-card hand from any combination of your 2 hole cards and the 5 community cards; the strongest hand wins the pot.",
+    gRankTitle:"Hand rankings (high to low)",
+    gToolTitle:"What this tool computes",
+    gToolText:"It runs many randomized deals to estimate the probability your hand beats your opponents' (your equity); it also shows the hand you've currently made, and combines the pot and call amounts you enter with pot odds to tell you whether calling is profitable in the long run.",
+    ranks:[["Royal Flush","A K Q J 10, same suit"],["Straight Flush","Five in sequence, same suit"],["Four of a Kind","Four cards of one rank"],["Full House","Three of a kind + a pair"],["Flush","Five of the same suit"],["Straight","Five in sequence"],["Three of a Kind","Three of one rank"],["Two Pair","Two different pairs"],["Pair","Two of one rank"],["High Card","None of the above"]]}
+};
+let lang='zh';
+
+// 每个牌型的示意牌(category 9..0),语言无关
+const HAND_CARDS={
+  9:[['A','s'],['K','s'],['Q','s'],['J','s'],['T','s']],
+  8:[['9','h'],['8','h'],['7','h'],['6','h'],['5','h']],
+  7:[['K','s'],['K','h'],['K','d'],['K','c'],['3','s']],
+  6:[['K','s'],['K','h'],['K','d'],['9','s'],['9','h']],
+  5:[['A','h'],['9','h'],['7','h'],['4','h'],['2','h']],
+  4:[['9','s'],['8','h'],['7','d'],['6','c'],['5','s']],
+  3:[['K','s'],['K','h'],['K','d'],['7','s'],['2','h']],
+  2:[['K','s'],['K','h'],['9','d'],['9','c'],['2','s']],
+  1:[['K','s'],['K','h'],['A','d'],['7','c'],['2','s']],
+  0:[['A','s'],['K','h'],['Q','d'],['J','c'],['9','s']],
+};
+function miniCards(cards){
+  return '<span class="mini-row">'+cards.map(([r,s])=>{
+    const red=(s==='h'||s==='d');
+    return '<span class="mini-card'+(red?' red':'')+'">'+r+'<span class="ms">'+SUIT_SYM[s]+'</span></span>';
+  }).join('')+'</span>';
+}
+
+// ===== verified engine (unchanged) =====
+function handRank5(cards){
+  const vals=cards.map(c=>RANK_VAL[c[0]]).sort((a,b)=>b-a);
+  const suits=cards.map(c=>c[1]);const isFlush=new Set(suits).size===1;
+  const cnt={};vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  const uniq=[...new Set(vals)].sort((a,b)=>b-a);
+  let isStraight=false,sHigh=null;
+  if(uniq.length===5){if(uniq[0]-uniq[4]===4){isStraight=true;sHigh=uniq[0];}else if(JSON.stringify(uniq)===JSON.stringify([14,5,4,3,2])){isStraight=true;sHigh=5;}}
+  const byCount=[...vals].sort((a,b)=>(cnt[b]-cnt[a])||(b-a));
+  const counts=Object.values(cnt).sort((a,b)=>b-a);const cs=JSON.stringify(counts);
+  if(isStraight&&isFlush)return[(sHigh===14?9:8),[sHigh]];
+  if(cs==='[4,1]')return[7,byCount];if(cs==='[3,2]')return[6,byCount];
+  if(isFlush)return[5,vals];if(isStraight)return[4,[sHigh]];
+  if(cs==='[3,1,1]')return[3,byCount];if(cs==='[2,2,1]')return[2,byCount];
+  if(cs==='[2,1,1,1]')return[1,byCount];return[0,vals];
+}
+function cmp(a,b){if(a[0]!==b[0])return a[0]-b[0];const x=a[1],y=b[1];for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d;}return 0;}
+const COMB5=[];for(let a=0;a<7;a++)for(let b=a+1;b<7;b++)for(let c=b+1;c<7;c++)for(let d=c+1;d<7;d++)for(let e=d+1;e<7;e++)COMB5.push([a,b,c,d,e]);
+function best7(c){let best=null;for(const k of COMB5){const f=[c[k[0]],c[k[1]],c[k[2]],c[k[3]],c[k[4]]];const r=handRank5(f);if(best===null||cmp(r,best)>0)best=r;}return best;}
+function combosK(n,k){const res=[];const idx=Array.from({length:k},(_,i)=>i);while(true){res.push(idx.slice());let i=k-1;while(i>=0&&idx[i]===n-k+i)i--;if(i<0)break;idx[i]++;for(let j=i+1;j<k;j++)idx[j]=idx[j-1]+1;}return res;}
+function bestN(cards){
+  if(cards.length<5){const vals=cards.map(c=>RANK_VAL[c[0]]);const cnt={};vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);const counts=Object.values(cnt).sort((a,b)=>b-a);
+    if(counts[0]===4)return 7;if(counts[0]===3&&counts[1]>=2)return 6;if(counts[0]===3)return 3;if(counts[0]===2&&counts[1]===2)return 2;if(counts[0]===2)return 1;return 0;}
+  let best=null;for(const combo of combosK(cards.length,5)){const five=combo.map(i=>cards[i]);const r=handRank5(five);if(best===null||cmp(r,best)>0)best=r;}return best[0];
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+function equity(hero,board,nOpp,iters){const known=new Set([...hero,...board]);const pool=DECK.filter(c=>!known.has(c));let wins=0,ties=0;const need=5-board.length;
+  for(let it=0;it<iters;it++){shuffle(pool);let idx=0;const opps=[];for(let o=0;o<nOpp;o++){opps.push([pool[idx],pool[idx+1]]);idx+=2;}
+    const sim=board.concat(pool.slice(idx,idx+need));idx+=need;const hs=best7(hero.concat(sim));let bo=null;
+    for(const o of opps){const os=best7(o.concat(sim));if(bo===null||cmp(os,bo)>0)bo=os;}const d=cmp(hs,bo);if(d>0)wins++;else if(d===0)ties++;}
+  return{win:wins/iters,tie:ties/iters,lose:(iters-wins-ties)/iters};}
+
+// ===== UI =====
+const hole=[null,null];const board=[null,null,null,null,null];
+let nOpp=1,activeTarget=null,pickSuit='s',lastWin=null;
+function usedCards(){return[...hole,...board].filter(Boolean);}
+const $=id=>document.getElementById(id);
+
+function applyLang(){
+  const t=T[lang];
+  $('eyebrow').textContent=t.eyebrow;$('h1').textContent=t.h1;$('sub').textContent=t.sub;
+  $('eqLabel').textContent=t.eqLabel;$('lblW').textContent=t.lblW;$('lblT').textContent=t.lblT;$('lblL').textContent=t.lblL;
+  $('lblHand').textContent=t.lblHand;$('lblBoard').textContent=t.lblBoard;$('hintBoard').textContent=t.hintBoard;
+  $('lblOpp').textContent=t.lblOpp;$('oppUnit').textContent=t.oppUnit;
+  $('lblPot').textContent=t.lblPot;$('hintPot').textContent=t.hintPot;$('lblPotSize').textContent=t.lblPotSize;$('lblCall').textContent=t.lblCall;
+  $('pot').placeholder=t.potPh;$('call').placeholder=t.callPh;
+  $('clearBtn').textContent=t.clear;$('pickerTitle').textContent=t.pickerTitle;$('pickerClose').textContent=t.pickerCancel;
+  $('footer').textContent=t.footer;
+  // 介绍区
+  $('guideTitle').textContent=t.guideTitle;
+  $('gPlayTitle').textContent=t.gPlayTitle;$('gPlayText').textContent=t.gPlayText;
+  $('gRankTitle').textContent=t.gRankTitle;
+  $('gToolTitle').textContent=t.gToolTitle;$('gToolText').textContent=t.gToolText;
+  const rl=$('rankList');rl.innerHTML='';
+  t.ranks.forEach((r,i)=>{const cat=9-i;const d=document.createElement('div');d.className='rank-item';
+    d.innerHTML='<div class="rank-head"><span class="ord">'+(i+1)+'</span><span class="nm">'+r[0]+'</span><span class="ex">'+r[1]+'</span></div>'+miniCards(HAND_CARDS[cat]);rl.appendChild(d);});
+  document.documentElement.lang=lang;
+  // 重绘动态内容
+  if(lastWin===null && (!hole[0]||!hole[1])) $('note').textContent=t.noteIdle;
+  recalc();
+}
+
+function renderSlots(){
+  const hr=$('holeRow');hr.innerHTML='';hole.forEach((c,i)=>hr.appendChild(makeSlot(c,'hole',i)));
+  const br=$('boardRow');br.innerHTML='';board.forEach((c,i)=>br.appendChild(makeSlot(c,'board',i)));
+}
+function makeSlot(card,type,i){const d=document.createElement('div');d.className='slot';
+  if(card){d.classList.add('filled','s-'+card[1]);d.innerHTML=card[0]+'<span class="suit">'+SUIT_SYM[card[1]]+'</span>';}else d.textContent='+';
+  if(activeTarget&&activeTarget.type===type&&activeTarget.i===i)d.classList.add('active');
+  d.onclick=()=>{activeTarget={type,i};openPicker();};return d;}
+function openPicker(){$('picker').style.display='flex';renderRanks();}
+function closePicker(){$('picker').style.display='none';activeTarget=null;renderSlots();}
+function renderRanks(){const used=new Set(usedCards());const g=$('rankGrid');g.innerHTML='';
+  for(const r of RANKS.split('').reverse()){const card=r+pickSuit;const b=document.createElement('button');b.textContent=r;
+    b.style.cssText='padding:12px 0;border-radius:7px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;color:'+((pickSuit==='d'||pickSuit==='h')?'#e5484d':'#1a1a1a');
+    if(used.has(card)){b.disabled=true;b.style.opacity=.25;b.style.cursor='not-allowed';}
+    b.onclick=()=>{if(activeTarget.type==='hole')hole[activeTarget.i]=card;else board[activeTarget.i]=card;closePicker();recalc();};g.appendChild(b);}}
+$('suitTabs').onclick=(e)=>{const btn=e.target.closest('button');if(!btn)return;pickSuit=btn.dataset.s;
+  [...$('suitTabs').children].forEach(x=>{const on=x.dataset.s===pickSuit;x.style.background=on?'rgba(91,140,255,.12)':'#0e1424';x.style.borderColor=on?'var(--accent)':'var(--line)';});renderRanks();};
+$('pickerClose').onclick=closePicker;
+$('picker').onclick=(e)=>{if(e.target.id==='picker')closePicker();};
+$('oPlus').onclick=()=>{if(nOpp<8){nOpp++;$('oNum').textContent=nOpp;recalc();}};
+$('oMinus').onclick=()=>{if(nOpp>1){nOpp--;$('oNum').textContent=nOpp;recalc();}};
+$('clearBtn').onclick=()=>{hole[0]=hole[1]=null;for(let i=0;i<5;i++)board[i]=null;lastWin=null;renderSlots();resetEquity();updateDecision();};
+$('pot').oninput=updateDecision;$('call').oninput=updateDecision;
+$('lang').onclick=(e)=>{const b=e.target.closest('button');if(!b)return;lang=b.dataset.lang;[...$('lang').children].forEach(x=>x.classList.toggle('active',x.dataset.lang===lang));applyLang();};
+$('guideHead').onclick=()=>{const body=$('guideBody');const open=body.style.display!=='none';body.style.display=open?'none':'block';$('guideToggle').textContent=open?'+':'−';};
+
+function resetEquity(){const t=T[lang];$('winPct').innerHTML='—<small>%</small>';$('madeHand').textContent='';
+  $('wTxt').textContent='—';$('tTxt').textContent='—';$('lTxt').textContent='—';
+  $('bWin').style.width='0';$('bTie').style.width='0';$('bLose').style.width='100%';$('note').textContent=t.noteIdle;}
+function updateDecision(){const t=T[lang];const pot=parseFloat($('pot').value);const call=parseFloat($('call').value);const el=$('decision');
+  if(!(pot>0)||!(call>0)){el.className='decision idle';el.textContent=t.decIdle;return;}
+  const needed=call/(pot+call);
+  if(lastWin===null){el.className='decision idle';el.innerHTML=t.needOnly((needed*100).toFixed(1))+t.needRow(pot,call);return;}
+  const ok=lastWin>needed;el.className='decision '+(ok?'call':'fold');
+  el.innerHTML='<b>'+(ok?t.call:t.fold)+'</b>'+t.decRow((lastWin*100).toFixed(1),(needed*100).toFixed(1));}
+function recalc(){const t=T[lang];renderSlots();
+  if(hole[0]&&hole[1]){const cat=bestN([hole[0],hole[1]].concat(board.filter(Boolean)));$('madeHand').textContent=t.madePrefix+t.names[cat];}else $('madeHand').textContent='';
+  if(!hole[0]||!hole[1]){lastWin=null;resetEquity();updateDecision();return;}
+  const b=board.filter(Boolean);
+  if(!(b.length===0||b.length===3||b.length===4||b.length===5)){$('note').textContent=t.boardErr;return;}
+  $('note').textContent=t.noteSim;const iters=b.length>=4?40000:25000;
+  setTimeout(()=>{const r=equity([hole[0],hole[1]],b,nOpp,iters);lastWin=r.win;
+    $('winPct').innerHTML=(r.win*100).toFixed(1)+'<small>%</small>';
+    $('wTxt').textContent=(r.win*100).toFixed(1)+'%';$('tTxt').textContent=(r.tie*100).toFixed(1)+'%';$('lTxt').textContent=(r.lose*100).toFixed(1)+'%';
+    $('bWin').style.width=(r.win*100)+'%';$('bTie').style.width=(r.tie*100)+'%';$('bLose').style.width=(r.lose*100)+'%';
+    $('note').textContent=t.noteDone(iters,nOpp);updateDecision();},30);}
+
+applyLang();renderSlots();resetEquity();
+</script>
+</body>
+</html>
