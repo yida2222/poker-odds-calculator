@@ -327,7 +327,6 @@ function recalc(){const t=T[lang];renderSlots();
     $('wTxt').textContent=(r.win*100).toFixed(1)+'%';$('tTxt').textContent=(r.tie*100).toFixed(1)+'%';$('lTxt').textContent=(r.lose*100).toFixed(1)+'%';
     $('bWin').style.width=(r.win*100)+'%';$('bTie').style.width=(r.tie*100)+'%';$('bLose').style.width=(r.lose*100)+'%';
     $('note').textContent=t.noteDone(iters,nOpp);updateDecision();},30);}
-  
 
 applyLang();renderSlots();resetEquity();
 </script>
